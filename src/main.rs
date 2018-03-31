@@ -3,12 +3,19 @@
 
 use std::collections::VecDeque;
 use std::thread;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, atomic::{AtomicPtr, Ordering}};
 use std::time::Instant;
 
 #[derive(Debug)]
+struct Node<T> {
+    data: T,
+    next: Option<AtomicPtr<Node<T>>>,
+}
+
+#[derive(Debug)]
 struct WorkPool<T> {
-    dequeue: VecDeque<T>,
+    head: AtomicPtr<Option<Node<T>>>,
+    tail: AtomicPtr<Option<Node<T>>>,
 }
 
 // FIXME: Currently, the implementation is not correct.
@@ -16,20 +23,36 @@ struct WorkPool<T> {
 impl<T> WorkPool<T> {
     fn new() -> Self {
         WorkPool {
-            dequeue: VecDeque::new(),
+            head: AtomicPtr::new(&mut None),
+            tail: AtomicPtr::new(&mut None),
         }
     }
 
     fn push(&mut self, value: T) {
-        self.dequeue.push_back(value)
+        self.tail.store(
+            &mut Some(Node {
+                data: value,
+                next: None,
+            }),
+            Ordering::Relaxed,
+        );
     }
 
     fn steal(&mut self) -> Option<T> {
-        self.dequeue.pop_back()
+        unsafe {
+            match *self.head.load(Ordering::Relaxed) {
+                Some(n) => Some(n.data),
+                None => None,
+            }
+        }
     }
 
+    // FIXME
     fn pop(&mut self) -> Option<T> {
-        self.dequeue.pop_front()
+        match self.tail.load(Ordering::Relaxed) {
+            n @ &mut Some(_) => Some(n.data),
+            &mut None => None,
+        }
     }
 }
 
