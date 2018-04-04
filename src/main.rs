@@ -14,11 +14,11 @@ struct Node<In, Out> {
 /*
 FIXME: Investigate this nested relation ships.
 impl<In, Out> Node<In, Out> {
-    pub fn new<F>(taskFn: F) -> Self
+    pub fn new<F>(task_fn: F) -> Self
     where
         F: Fn(In) -> Out + 'static,
     {
-        let _task = Task::new(taskFn);
+        let _task = Task::new(task_fn);
         Node {
             task: Box::new(_task),
             next: None

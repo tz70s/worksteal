@@ -12,18 +12,18 @@ pub trait TaskTrait {
 
 /// Task wrapped a boxed closure as abstraction.
 pub struct Task<In, Out> {
-    _task: Box<Fn(In) -> Out>,
+    task: Box<Fn(In) -> Out>,
 }
 
 impl<In, Out> Task<In, Out> {
     /// Create a new task.
     /// Which eat a Fn closure with single arguement and output.
-    pub fn new<F>(task: F) -> Self
+    pub fn new<F>(task_fn: F) -> Self
     where
         F: Fn(In) -> Out + 'static,
     {
         Task {
-            _task: Box::new(task),
+            task: Box::new(task_fn),
         }
     }
 }
@@ -32,7 +32,7 @@ impl<In, Out> TaskTrait for Task<In, Out> {
     type In = In;
     type Out = Out;
     fn call(&self, arg: In) -> Out {
-        (self._task)(arg)
+        (self.task)(arg)
     }
 }
 
