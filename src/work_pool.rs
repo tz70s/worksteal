@@ -4,6 +4,9 @@
 //! This work_pool module contains work pool implementation.
 
 use task::Task;
+// TODO: temporary undergoing replacement.
+use std::collections::VecDeque;
+use std::sync::Mutex;
 
 struct Node<In, Out> {
     task: Task<In, Out>,
@@ -13,7 +16,7 @@ struct Node<In, Out> {
 impl<In, Out> Node<In, Out> {
     pub fn new<F>(task_fn: F) -> Self
     where
-        F: Fn(In) -> Out + 'static,
+        F: Fn(In) -> Out + 'static + Send + Sync,
     {
         let _task = Task::new(task_fn);
         Node {
@@ -26,36 +29,29 @@ impl<In, Out> Node<In, Out> {
 /// WorkPool structure for each workers.
 /// The head, tail should be atomic based ptr.
 pub struct WorkPool<In, Out> {
-    head: Option<Box<Node<In, Out>>>,
-    tail: Option<Box<Node<In, Out>>>,
-    len: usize,
+    pool: Mutex<VecDeque<Task<In, Out>>>,
 }
 
 impl<In, Out> WorkPool<In, Out> {
     pub fn new() -> Self {
         WorkPool {
-            head: None,
-            tail: None,
-            len: 0,
+            pool: Mutex::new(VecDeque::new()),
         }
     }
 
-    pub fn push<F>(&mut self, task_fn: F)
+    pub fn push<F>(&self, task_fn: F)
     where
-        F: Fn(In) -> Out + 'static,
+        F: Fn(In) -> Out + 'static + Send + Sync,
     {
-        match self.head {
-            Some(ref mut boxed_node) => boxed_node.next = Some(Box::new(Node::new(task_fn))),
-            None => self.head = Some(Box::new(Node::new(task_fn))),
-        }
-        self.len += 1;
+        let _task = Task::new(task_fn);
+        self.pool.lock().unwrap().push_back(_task);
     }
 
     pub fn pop(&self) -> Option<Task<In, Out>> {
-        unimplemented!();
+        self.pool.lock().unwrap().pop_back()
     }
 
     pub fn steal(&self) -> Option<Task<In, Out>> {
-        unimplemented!();
+        self.pool.lock().unwrap().pop_front()
     }
 }

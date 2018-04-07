@@ -3,9 +3,11 @@
 
 //! This task module contains of task abstraction.
 
+use std::sync::Arc;
+
 /// Task wrapped a boxed closure as abstraction.
 pub struct Task<In, Out> {
-    task: Box<Fn(In) -> Out>,
+    task: Arc<Fn(In) -> Out + 'static + Send + Sync>,
 }
 
 impl<In, Out> Task<In, Out> {
@@ -13,10 +15,10 @@ impl<In, Out> Task<In, Out> {
     /// Which eat a Fn closure with single arguement and output.
     pub fn new<F>(task_fn: F) -> Self
     where
-        F: Fn(In) -> Out + 'static,
+        F: Fn(In) -> Out + 'static + Send + Sync,
     {
         Task {
-            task: Box::new(task_fn),
+            task: Arc::new(task_fn),
         }
     }
 
